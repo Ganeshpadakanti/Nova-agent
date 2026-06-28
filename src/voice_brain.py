@@ -24,7 +24,7 @@ SAMPLE_RATE     = 16000
 DEVICE_INDEX    = 1
 SPEECH_RATE     = 1
 AWAKE_TIMEOUT   = 300
-GROQ_API_KEY    = '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'
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 
 # Words that are clearly conversational — never run tools on these
 CONVERSATIONAL = [
