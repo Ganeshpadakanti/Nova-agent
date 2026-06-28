@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nova</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:120px; height:120px;
+    background:transparent; overflow:hidden;
+    user-select:none; -webkit-user-select:none;
+  }
+  .wrap {
+    width:120px; height:120px;
+    position:relative;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-end;
+    cursor:grab;
+  }
+  .wrap:active { cursor:grabbing; }
+
+  /* ── bubble ── */
+  .bubble {
+    position:absolute; top:0; left:50%;
+    transform:translateX(-50%);
+    background:rgba(20,100,50,0.93); color:#fff;
+    font:600 9px/1 system-ui; padding:3px 8px;
+    border-radius:8px; white-space:nowrap;
+    opacity:0; transition:opacity .25s;
+    pointer-events:none; z-index:20;
+  }
+  .bubble.on { opacity:1; }
+  .bubble::after {
+    content:''; position:absolute; bottom:-4px; left:50%;
+    transform:translateX(-50%);
+    border:4px solid transparent;
+    border-top-color:rgba(20,100,50,0.93); border-bottom:0;
+  }
+
+  /* ── listening rings ── */
+  .ring {
+    position:absolute; bottom:10px; left:50%;
+    width:70px; height:70px; margin-left:-35px;
+    border-radius:50%; border:2px solid rgba(34,211,238,0.8);
+    opacity:0; pointer-events:none;
+    animation:kRing 1.4s ease-out infinite;
+    display:none;
+  }
+  .ring2 { animation:kRing 1.4s ease-out infinite .7s; }
+  @keyframes kRing {
+    0%  { opacity:.7; transform:translateX(-50%) scale(.5); }
+    100%{ opacity:0;  transform:translateX(-50%) scale(1.5); }
+  }
+
+  /* ── turtle ── */
+  .turtle {
+    width:90px; height:90px;
+    object-fit:contain;
+    mix-blend-mode:screen;
+    image-rendering:pixelated;
+    display:none;
+    position:relative; z-index:5;
+    animation:kFloat 3s ease-in-out infinite;
+  }
+  .turtle.on { display:block; }
+
+  @keyframes kFloat {
+    0%,100%{ transform:translateY(0px); }
+    50%    { transform:translateY(-5px); }
+  }
+
+  .shadow {
+    width:55px; height:8px;
+    background:radial-gradient(ellipse,rgba(0,0,0,0.18) 0%,transparent 70%);
+    border-radius:50%; margin-top:-4px;
+    animation:kShadow 3s ease-in-out infinite;
+  }
+  @keyframes kShadow {
+    0%,100%{ width:55px; opacity:.45; }
+    50%    { width:42px; opacity:.2; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="bubble" id="bubble"></div>
+  <div class="ring"       id="ring1"></div>
+  <div class="ring ring2" id="ring2"></div>
+
+  <img class="turtle on" id="t-idle"      src="../../assets/Idle.png"      alt=""/>
+  <img class="turtle"    id="t-listening" src="../../assets/Listening.png" alt=""/>
+  <img class="turtle"    id="t-thinking"  src="../../assets/Thinking.png"  alt=""/>
+  <img class="turtle"    id="t-speaking"  src="../../assets/Idle.png"      alt=""/>
+  <img class="turtle"    id="t-happy"     src="../../assets/Happy.png"     alt=""/>
+  <img class="turtle"    id="t-watching"  src="../../assets/watching.png"  alt=""/>
+
+  <div class="shadow"></div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron')
+
+const bubble = document.getElementById('bubble')
+const ring1  = document.getElementById('ring1')
+const ring2  = document.getElementById('ring2')
+
+const TURTLES = ['idle','listening','thinking','speaking','happy','watching']
+  .reduce((o,k) => { o[k] = document.getElementById('t-'+k); return o }, {})
+
+const INFO = {
+  idle:      { label: '',             rings: false },
+  listening: { label: 'Listening...', rings: true  },
+  thinking:  { label: 'Thinking...',  rings: false },
+  speaking:  { label: 'Speaking!',    rings: false },
+  happy:     { label: 'Done!',        rings: false },
+  watching:  { label: 'Watching...',  rings: false },
+}
+
+function setState(s) {
+  if (!INFO[s]) return
+  Object.values(TURTLES).forEach(el => el.classList.remove('on'))
+  TURTLES[s].classList.add('on')
+  const label = INFO[s].label
+  bubble.textContent = label
+  bubble.classList.toggle('on', !!label)
+  const show = INFO[s].rings ? 'block' : 'none'
+  ring1.style.display = ring2.style.display = show
+  if (s === 'happy') setTimeout(() => setState('idle'), 3000)
+}
+
+// ─── IPC FROM PYTHON ──────────────────────────────────────────────────────────
+ipcRenderer.on('nova-set-state', (e, s) => setState(s))
+
+// ─── DRAG TO MOVE ─────────────────────────────────────────────────────────────
+let isDragging = false
+let dragStart  = { x: 0, y: 0 }
+const wrap = document.getElementById('wrap')
+
+wrap.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return
+  isDragging = true
+  dragStart  = { x: e.screenX, y: e.screenY }
+  e.preventDefault()
+})
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return
+  const dx = e.screenX - dragStart.x
+  const dy = e.screenY - dragStart.y
+  dragStart = { x: e.screenX, y: e.screenY }
+  if (window.novaIPC) window.novaIPC.drag(dx, dy)
+})
+window.addEventListener('mouseup', () => { isDragging = false })
+
+// right-click cycles states for testing
+const cycle = ['idle','listening','thinking','speaking','happy','watching']
+let ci = 0
+wrap.addEventListener('contextmenu', e => {
+  e.preventDefault()
+  ci = (ci + 1) % cycle.length
+  setState(cycle[ci])
+})
+
+setState('idle')
+</script>
+</body>
+</html>

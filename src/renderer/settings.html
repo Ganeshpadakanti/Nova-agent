@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nova Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0a1e;
+      color: #e2d9f3;
+      padding: 24px;
+      height: 100vh;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 500;
+      color: #c4b5fd;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      font-size: 12px;
+      color: #7c6fa0;
+      margin-bottom: 28px;
+    }
+    .setting-group {
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #a78bfa;
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1e1040;
+      border: 1px solid #4c1d95;
+      border-radius: 8px;
+      color: #e2d9f3;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus { border-color: #8b5cf6; }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e1040;
+    }
+    .toggle-row span { font-size: 13px; }
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: #8b5cf6; }
+    .save-btn {
+      width: 100%;
+      padding: 10px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .save-btn:hover { background: #6d28d9; }
+    .version { font-size: 11px; color: #4c1d95; text-align: center; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Nova Settings</h1>
+  <p class="subtitle">Phase 1 — more options unlock in later phases</p>
+
+  <div class="setting-group">
+    <label>Wake word (default: "Hey Nova")</label>
+    <input type="text" id="wakeName" value="Hey Nova" placeholder="e.g. Hey Nova"/>
+  </div>
+
+  <div class="setting-group">
+    <label>Anthropic API Key (for Phase 2)</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..."/>
+  </div>
+
+  <div class="setting-group">
+    <div class="toggle-row">
+      <span>Start with Windows / Mac</span>
+      <input type="checkbox" id="autoStart" checked/>
+    </div>
+    <div class="toggle-row">
+      <span>Show on all desktops</span>
+      <input type="checkbox" id="allDesktops" checked/>
+    </div>
+    <div class="toggle-row">
+      <span>Play sound on wake</span>
+      <input type="checkbox" id="wakeSound"/>
+    </div>
+  </div>
+
+  <button class="save-btn" onclick="save()">Save Settings</button>
+  <p class="version">Nova Agent v1.0 — Phase 1</p>
+
+  <script>
+    function save() {
+      const settings = {
+        wakeName: document.getElementById('wakeName').value,
+        apiKey: document.getElementById('apiKey').value,
+        autoStart: document.getElementById('autoStart').checked,
+        allDesktops: document.getElementById('allDesktops').checked,
+        wakeSound: document.getElementById('wakeSound').checked,
+      }
+      // In Phase 2 we'll save these to a config file
+      localStorage.setItem('nova-settings', JSON.stringify(settings))
+      alert('Settings saved!')
+    }
+
+    // Load saved settings
+    const saved = JSON.parse(localStorage.getItem('nova-settings') || '{}')
+    if (saved.wakeName) document.getElementById('wakeName').value = saved.wakeName
+    if (saved.apiKey) document.getElementById('apiKey').value = saved.apiKey
+    if (saved.autoStart !== undefined) document.getElementById('autoStart').checked = saved.autoStart
+  </script>
+</body>
+</html>
